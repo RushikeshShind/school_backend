@@ -25,7 +25,7 @@ exports.getAllAdmins = async (req, res) => {
 
 // Create a new college admin
 exports.createAdmin = async (req, res) => {
-    const { username, password, college_id, role } = req.body;
+    const { username, password, college_id, role, full_name } = req.body;
 
     try {
         if (req.user.role !== 'SUPER_ADMIN') {
@@ -44,9 +44,12 @@ exports.createAdmin = async (req, res) => {
         // In production, hash the password
         const password_hash = password; 
 
+        // Use provided full_name or fallback to username to satisfy DB constraint
+        const nameToUse = full_name || username;
+
         await db.query(
-            'INSERT INTO college_admins (system_user_id, username, password_hash, college_id, role) VALUES (?, ?, ?, ?, ?)',
-            [system_user_id, username, password_hash, college_id, role || 'ADMIN']
+            'INSERT INTO college_admins (system_user_id, username, password_hash, college_id, role, full_name) VALUES (?, ?, ?, ?, ?, ?)',
+            [system_user_id, username, password_hash, college_id, role || 'ADMIN', nameToUse]
         );
 
         // Log activity only if current user has system_user_id (for backward compatibility)
