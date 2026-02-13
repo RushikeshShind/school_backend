@@ -19,12 +19,6 @@ exports.submitInquiry = async (req, res) => {
         let eligibility_status = 'PENDING';
         let status = 'NEW';
         
-        // Basic eligibility rule: Must have passed 12th (presence of percentage implies passed for now, OR we check a flag if provided)
-        // User Requirement: "suppose he enter that he didnt given the 12th na then automatic reject"
-        // We can infer this if twelfth_percentage is null/0 OR a specific field 'passed_12th' is false. 
-        // Assuming the detailed academic form has these fields.
-        // For now, let's assume if percentage is < passing marks (e.g. 35) or not provided, we reject.
-        
         if (!twelfth_percentage || twelfth_percentage < 35) {
              eligibility_status = 'NOT_ELIGIBLE';
              status = 'REJECTED';
@@ -41,17 +35,78 @@ exports.submitInquiry = async (req, res) => {
             twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status]
         );
 
-        if (eligibility_status === 'NOT_ELIGIBLE') {
-            return res.status(200).json({ 
-                success: false, 
-                message: 'Sorry, you are not eligible for admission as per the criteria.',
-                inquiry_id: result.insertId
-            });
-        }
-
         res.status(201).json({ 
             success: true, 
             message: 'Inquiry submitted successfully!',
+            inquiry_id: result.insertId 
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+};
+
+exports.adminCreateInquiry = async (req, res) => {
+    try {
+        const {
+            college_id, // For Super Admin
+            candidate_name,
+            candidate_mobile,
+            candidate_email,
+            parent_mobile,
+            residential_address,
+            twelfth_percentage,
+            year_of_passing,
+            twelfth_board,
+            admin_notes
+        } = req.body;
+
+        const { system_user_id, role, username, college_id: user_college_id } = req.user;
+        let final_college_id = college_id || user_college_id;
+
+        // If regular ADMIN, they can't override their college_id
+        if (role === 'ADMIN') {
+            final_college_id = user_college_id;
+        }
+
+        if (!final_college_id) {
+            return res.status(400).json({ success: false, message: 'College ID is required' });
+        }
+
+        // Eligibility Logic
+        let eligibility_status = 'PENDING';
+        let status = 'NEW';
+        
+        if (twelfth_percentage && twelfth_percentage < 35) {
+             eligibility_status = 'NOT_ELIGIBLE';
+             status = 'REJECTED';
+        } else if (twelfth_percentage) {
+            eligibility_status = 'ELIGIBLE';
+        }
+
+        const [result] = await db.query(
+            `INSERT INTO inquiries 
+            (college_id, candidate_name, candidate_mobile, candidate_email, parent_mobile, residential_address, 
+            twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status, admin_notes) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [final_college_id, candidate_name, candidate_mobile, candidate_email, parent_mobile, residential_address, 
+            twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status, admin_notes]
+        );
+
+        // Log activity
+        await logActivity(
+            system_user_id,
+            role,
+            username,
+            'CREATE_INQUIRY',
+            `Manually created inquiry for student: ${candidate_name} (ID: ${result.insertId})`,
+            req
+        );
+
+        res.status(201).json({ 
+            success: true, 
+            message: 'Inquiry created successfully by admin!',
             inquiry_id: result.insertId 
         });
 

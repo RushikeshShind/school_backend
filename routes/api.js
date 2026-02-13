@@ -16,6 +16,7 @@ router.post('/inquiry', inquiryController.submitInquiry);
 router.post('/logout', authMiddleware, authController.logout);
 // Inquiry Routes
 router.get('/inquiries', authMiddleware, inquiryController.getAllInquiries);
+router.post('/inquiries', authMiddleware, inquiryController.adminCreateInquiry);
 router.get('/inquiries/:id', authMiddleware, inquiryController.getInquiryById);
 router.post('/inquiries/:id/record-fee', authMiddleware, inquiryController.recordFee);
 router.get('/inquiries/:id/fees', authMiddleware, inquiryController.getInquiryFees);
