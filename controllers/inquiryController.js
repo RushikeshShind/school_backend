@@ -18,10 +18,10 @@ exports.submitInquiry = async (req, res) => {
         // Eligibility Logic
         let eligibility_status = 'PENDING';
         let status = 'NEW';
-        
+
         if (!twelfth_percentage || twelfth_percentage < 35) {
-             eligibility_status = 'NOT_ELIGIBLE';
-             status = 'REJECTED';
+            eligibility_status = 'NOT_ELIGIBLE';
+            status = 'REJECTED';
         } else {
             eligibility_status = 'ELIGIBLE';
         }
@@ -31,14 +31,14 @@ exports.submitInquiry = async (req, res) => {
             (college_id, candidate_name, candidate_mobile, candidate_email, parent_mobile, residential_address, 
             twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [college_id, candidate_name, candidate_mobile, candidate_email, parent_mobile, residential_address, 
-            twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status]
+            [college_id, candidate_name, candidate_mobile, candidate_email, parent_mobile, residential_address,
+                twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status]
         );
 
-        res.status(201).json({ 
-            success: true, 
+        res.status(201).json({
+            success: true,
             message: 'Inquiry submitted successfully!',
-            inquiry_id: result.insertId 
+            inquiry_id: result.insertId
         });
 
     } catch (error) {
@@ -77,10 +77,10 @@ exports.adminCreateInquiry = async (req, res) => {
         // Eligibility Logic
         let eligibility_status = 'PENDING';
         let status = 'NEW';
-        
+
         if (twelfth_percentage && twelfth_percentage < 35) {
-             eligibility_status = 'NOT_ELIGIBLE';
-             status = 'REJECTED';
+            eligibility_status = 'NOT_ELIGIBLE';
+            status = 'REJECTED';
         } else if (twelfth_percentage) {
             eligibility_status = 'ELIGIBLE';
         }
@@ -90,8 +90,8 @@ exports.adminCreateInquiry = async (req, res) => {
             (college_id, candidate_name, candidate_mobile, candidate_email, parent_mobile, residential_address, 
             twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status, admin_notes) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [final_college_id, candidate_name, candidate_mobile, candidate_email, parent_mobile, residential_address, 
-            twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status, admin_notes]
+            [final_college_id, candidate_name, candidate_mobile, candidate_email, parent_mobile, residential_address,
+                twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status, admin_notes]
         );
 
         // Log activity
@@ -104,10 +104,10 @@ exports.adminCreateInquiry = async (req, res) => {
             req
         );
 
-        res.status(201).json({ 
-            success: true, 
+        res.status(201).json({
+            success: true,
             message: 'Inquiry created successfully by admin!',
-            inquiry_id: result.insertId 
+            inquiry_id: result.insertId
         });
 
     } catch (error) {
@@ -120,8 +120,8 @@ exports.getAllInquiries = async (req, res) => {
     // Admin View
     try {
         // Assume middleware adds user info to req.user
-        const { college_id, role } = req.user; 
-        
+        const { college_id, role } = req.user;
+
         if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
             return res.status(403).json({ message: 'Unauthorized' });
         }
@@ -139,7 +139,7 @@ exports.getAllInquiries = async (req, res) => {
         const [rows] = await db.query(query, params);
         res.json({ success: true, data: rows });
     } catch (error) {
-         console.error(error);
+        console.error(error);
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 };
@@ -150,7 +150,7 @@ exports.getInquiryById = async (req, res) => {
         const { college_id, role } = req.user;
 
         const [rows] = await db.query('SELECT * FROM inquiries WHERE id = ?', [id]);
-        
+
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Inquiry not found' });
         }
@@ -182,10 +182,24 @@ exports.getOverviewStats = async (req, res) => {
 
         query += ' GROUP BY status';
         const [rows] = await db.query(query, params);
-        res.json({ success: true, data: rows });
+
+        // Calculate totals for response summary
+        const total_inquiries = rows.reduce((acc, curr) => acc + curr.count, 0);
+        const total_admissions = rows
+            .filter(r => r.status === 'ENROLLED' || r.status === 'ACCEPTED')
+            .reduce((acc, curr) => acc + curr.count, 0);
+
+        res.json({
+            success: true,
+            data: {
+                total_inquiries,
+                total_admissions,
+                status_breakdown: rows
+            }
+        });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server Error' });
+        res.status(500).json({ success: false, message: 'Server Error' });
     }
 };
 
@@ -250,7 +264,7 @@ exports.updateInquiryStatus = async (req, res) => {
         const { id } = req.params;
         const { status, admin_notes } = req.body;
         const { system_user_id, username, role } = req.user;
-        
+
         // Get inquiry details before update
         const [inquiry] = await db.query('SELECT * FROM inquiries WHERE id = ?', [id]);
         if (inquiry.length === 0) {
@@ -258,17 +272,17 @@ exports.updateInquiryStatus = async (req, res) => {
         }
 
         const [result] = await db.query('UPDATE inquiries SET status = ?, admin_notes = ? WHERE id = ?', [status, admin_notes, id]);
-        
+
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Inquiry not found' });
         }
 
         // Log activity
         await logActivity(
-            system_user_id, 
-            role, 
-            username, 
-            'UPDATE_INQUIRY', 
+            system_user_id,
+            role,
+            username,
+            'UPDATE_INQUIRY',
             `Updated inquiry #${id} (${inquiry[0].candidate_name}) status to ${status}`,
             req
         );

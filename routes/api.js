@@ -6,7 +6,9 @@ const adminUserController = require('../controllers/adminUserController');
 const activityLogController = require('../controllers/activityLogController');
 const collegeController = require('../controllers/collegeController');
 const profileController = require('../controllers/profileController');
+const admissionController = require('../controllers/admissionController');
 const authMiddleware = require('../middleware/authMiddleware');
+const admissionRoutes = require('./admissionRoutes');
 
 // Public Routes
 router.post('/login', authController.login);
@@ -14,6 +16,7 @@ router.post('/inquiry', inquiryController.submitInquiry);
 
 // Protected Routes
 router.post('/logout', authMiddleware, authController.logout);
+
 // Inquiry Routes
 router.get('/inquiries', authMiddleware, inquiryController.getAllInquiries);
 router.post('/inquiries', authMiddleware, inquiryController.adminCreateInquiry);
@@ -23,8 +26,11 @@ router.get('/inquiries/:id/fees', authMiddleware, inquiryController.getInquiryFe
 router.put('/inquiries/:id/status', authMiddleware, inquiryController.updateInquiryStatus);
 router.get('/dashboard-stats', authMiddleware, inquiryController.getOverviewStats);
 
+// Admission Routes
+router.use('/admissions', authMiddleware, admissionRoutes);
+
 // Profile Routes
-router.get('/profile', authMiddleware, profileController.getProfile); // This route was not in the provided edit block, but was in the original 'Profile Routes'
+router.get('/profile', authMiddleware, profileController.getProfile);
 router.post('/profile/send-otp', authMiddleware, profileController.sendProfileOTP);
 router.put('/profile', authMiddleware, profileController.updateProfile);
 router.put('/profile/password', authMiddleware, profileController.changePassword);
