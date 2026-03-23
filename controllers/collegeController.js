@@ -13,7 +13,7 @@ exports.getAllColleges = async (req, res) => {
             FROM colleges c 
             ORDER BY c.created_at DESC
         `);
-        
+
         // Map stats into a consistent object
         const formattedColleges = colleges.map(c => ({
             ...c,
@@ -35,13 +35,13 @@ exports.getAllColleges = async (req, res) => {
 exports.getCollegeDetails = async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         // College basic info
         const [colleges] = await db.query('SELECT * FROM colleges WHERE id = ?', [id]);
         if (colleges.length === 0) {
             return res.status(404).json({ message: 'College not found' });
         }
-        
+
         const college = colleges[0];
 
         // Inquiry stats
@@ -94,7 +94,7 @@ exports.getCollegeDetails = async (req, res) => {
 
 // Create a new college (Super Admin only)
 exports.createCollege = async (req, res) => {
-    const { name, project_name, address } = req.body;
+    const { name, project_name, address, form_fields } = req.body;
 
     try {
         if (req.user.role !== 'SUPER_ADMIN') {
@@ -102,8 +102,8 @@ exports.createCollege = async (req, res) => {
         }
 
         const [result] = await db.query(
-            'INSERT INTO colleges (name, project_name, address) VALUES (?, ?, ?)',
-            [name, project_name, address]
+            'INSERT INTO colleges (name, project_name, address, form_fields) VALUES (?, ?, ?, ?)',
+            [name, project_name, address, JSON.stringify(form_fields || null)]
         );
 
         // Log activity
@@ -126,7 +126,7 @@ exports.createCollege = async (req, res) => {
 // Update college
 exports.updateCollege = async (req, res) => {
     const { id } = req.params;
-    const { name, project_name, address } = req.body;
+    const { name, project_name, address, form_fields } = req.body;
 
     try {
         if (req.user.role !== 'SUPER_ADMIN') {
@@ -134,8 +134,8 @@ exports.updateCollege = async (req, res) => {
         }
 
         const [result] = await db.query(
-            'UPDATE colleges SET name = ?, project_name = ?, address = ? WHERE id = ?',
-            [name, project_name, address, id]
+            'UPDATE colleges SET name = ?, project_name = ?, address = ?, form_fields = ? WHERE id = ?',
+            [name, project_name, address, JSON.stringify(form_fields || null), id]
         );
 
         if (result.affectedRows === 0) {

@@ -9,10 +9,12 @@ exports.getAllAdmins = async (req, res) => {
         }
 
         const [admins] = await db.query(`
-            SELECT ca.id, ca.system_user_id, ca.username, ca.role, ca.is_active, ca.last_login_at, ca.last_logout_at, ca.created_at, 
-            COALESCE(c.name, 'Unknown College') as college_name 
+            SELECT ca.id, ca.system_user_id, ca.username, ca.role, ca.role_id, ca.is_active, ca.last_login_at, ca.last_logout_at, ca.created_at,
+            COALESCE(c.name, 'Unknown College') as college_name,
+            r.name as role_name
             FROM college_admins ca
             LEFT JOIN colleges c ON ca.college_id = c.id
+            LEFT JOIN roles r ON ca.role_id = r.id
             ORDER BY ca.created_at DESC
         `);
 
@@ -149,6 +151,45 @@ exports.getColleges = async (req, res) => {
     try {
         const [colleges] = await db.query('SELECT id, name FROM colleges');
         res.json({ success: true, data: colleges });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+// Get stats for a specific admin (inquiry count, recent inquiries)
+exports.getAdminStats = async (req, res) => {
+    try {
+        if (req.user.role !== 'SUPER_ADMIN') return res.status(403).json({ message: 'Forbidden' });
+
+        const { system_user_id } = req.params;
+
+        // Total inquiries created by this user
+        const [[countRow]] = await db.query(
+            'SELECT COUNT(*) as total FROM inquiries WHERE created_by_user_id = ?',
+            [system_user_id]
+        );
+
+        // Status breakdown
+        const [statusBreakdown] = await db.query(
+            'SELECT status, COUNT(*) as count FROM inquiries WHERE created_by_user_id = ? GROUP BY status',
+            [system_user_id]
+        );
+
+        // Recent 5 inquiries
+        const [recent] = await db.query(
+            'SELECT id, candidate_name, candidate_mobile, status, created_at FROM inquiries WHERE created_by_user_id = ? ORDER BY created_at DESC LIMIT 5',
+            [system_user_id]
+        );
+
+        res.json({
+            success: true,
+            data: {
+                total_inquiries: countRow.total,
+                status_breakdown: statusBreakdown,
+                recent_inquiries: recent
+            }
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });

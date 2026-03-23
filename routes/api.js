@@ -7,6 +7,7 @@ const activityLogController = require('../controllers/activityLogController');
 const collegeController = require('../controllers/collegeController');
 const profileController = require('../controllers/profileController');
 const admissionController = require('../controllers/admissionController');
+const roleController = require('../controllers/roleController');
 const authMiddleware = require('../middleware/authMiddleware');
 const admissionRoutes = require('./admissionRoutes');
 
@@ -40,6 +41,7 @@ router.get('/admins', authMiddleware, adminUserController.getAllAdmins);
 router.post('/admins', authMiddleware, adminUserController.createAdmin);
 router.put('/admins/:id/status', authMiddleware, adminUserController.toggleAdminStatus);
 router.delete('/admins/:id', authMiddleware, adminUserController.deleteAdmin);
+router.get('/admins/:system_user_id/stats', authMiddleware, adminUserController.getAdminStats);
 router.get('/colleges', authMiddleware, adminUserController.getColleges);
 
 // Super Admin Only: College Management
@@ -53,5 +55,11 @@ router.delete('/colleges/:id', authMiddleware, collegeController.deleteCollege);
 router.get('/activity-logs', authMiddleware, activityLogController.getActivityLogs);
 router.get('/activity-logs/summary', authMiddleware, activityLogController.getActivitySummary);
 router.get('/activity-logs/user/:system_user_id', authMiddleware, activityLogController.getUserActivityLogs);
+
+// Super Admin Only: Role Management
+router.get('/roles', authMiddleware, roleController.getRoles);
+router.post('/roles', authMiddleware, roleController.createRole);
+router.put('/roles/:id', authMiddleware, roleController.updateRole);
+router.delete('/roles/:id', authMiddleware, roleController.deleteRole);
 
 module.exports = router;

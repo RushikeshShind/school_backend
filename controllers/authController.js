@@ -42,7 +42,7 @@ exports.login = async (req, res) => {
             if (rows.length === 0) return res.status(401).json({ message: 'Invalid Credentials' });
 
             const admin = rows[0];
-            
+
             // Check if account is active
             if (admin.is_active === 0) {
                 return res.status(403).json({ message: 'Access Denied: Your account has been deactivated. Please contact Super Admin.' });
@@ -56,24 +56,48 @@ exports.login = async (req, res) => {
             // Log activity
             await logActivity(admin.system_user_id, 'ADMIN', admin.username, 'LOGIN', `Admin logged in from college ID: ${admin.college_id}`, req);
 
-            const token = jwt.sign({ 
-                id: admin.id, 
+            // Fetch role name and permissions
+            let permissions = {};
+            let role_name = null;
+            if (admin.role_id) {
+                const [roleRows] = await db.query('SELECT name FROM roles WHERE id = ?', [admin.role_id]);
+                if (roleRows.length > 0) role_name = roleRows[0].name;
+
+                const [perms] = await db.query(
+                    'SELECT module, can_view, can_create, can_edit, can_delete FROM role_permissions WHERE role_id = ?',
+                    [admin.role_id]
+                );
+                perms.forEach(p => {
+                    permissions[p.module] = {
+                        view: !!p.can_view,
+                        create: !!p.can_create,
+                        edit: !!p.can_edit,
+                        delete: !!p.can_delete
+                    };
+                });
+            }
+
+            const token = jwt.sign({
+                id: admin.id,
                 system_user_id: admin.system_user_id,
-                role: 'ADMIN', 
+                role: 'ADMIN',
                 college_id: admin.college_id,
                 username: admin.username,
                 full_name: admin.full_name
             }, process.env.JWT_SECRET, { expiresIn: '1d' });
-            
-            return res.json({ 
-                success: true, 
-                token, 
-                role: 'ADMIN', 
+
+            return res.json({
+                success: true,
+                token,
+                role: 'ADMIN',
                 college_id: admin.college_id,
                 system_user_id: admin.system_user_id,
                 username: admin.username,
                 full_name: admin.full_name,
-                photo_url: admin.photo_url
+                photo_url: admin.photo_url,
+                role_id: admin.role_id,
+                role_name,
+                permissions
             });
         } else {
             return res.status(400).json({ message: 'Invalid Role' });

@@ -12,7 +12,8 @@ exports.submitInquiry = async (req, res) => {
             residential_address,
             twelfth_percentage,
             year_of_passing,
-            twelfth_board
+            twelfth_board,
+            extra_details // New field for dynamic form data
         } = req.body;
 
         // Eligibility Logic
@@ -29,10 +30,10 @@ exports.submitInquiry = async (req, res) => {
         const [result] = await db.query(
             `INSERT INTO inquiries 
             (college_id, candidate_name, candidate_mobile, candidate_email, parent_mobile, residential_address, 
-            twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status, extra_details) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [college_id, candidate_name, candidate_mobile, candidate_email, parent_mobile, residential_address,
-                twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status]
+                twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status, JSON.stringify(extra_details || {})]
         );
 
         res.status(201).json({
@@ -59,7 +60,8 @@ exports.adminCreateInquiry = async (req, res) => {
             twelfth_percentage,
             year_of_passing,
             twelfth_board,
-            admin_notes
+            admin_notes,
+            extra_details // New field
         } = req.body;
 
         const { system_user_id, role, username, college_id: user_college_id } = req.user;
@@ -85,13 +87,17 @@ exports.adminCreateInquiry = async (req, res) => {
             eligibility_status = 'ELIGIBLE';
         }
 
+        const creatorName = req.user.full_name || req.user.username || username;
+
         const [result] = await db.query(
-            `INSERT INTO inquiries 
-            (college_id, candidate_name, candidate_mobile, candidate_email, parent_mobile, residential_address, 
-            twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status, admin_notes) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO inquiries
+            (college_id, candidate_name, candidate_mobile, candidate_email, parent_mobile, residential_address,
+            twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status, admin_notes, extra_details,
+            created_by_user_id, created_by_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [final_college_id, candidate_name, candidate_mobile, candidate_email, parent_mobile, residential_address,
-                twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status, admin_notes]
+                twelfth_percentage, year_of_passing, twelfth_board, eligibility_status, status, admin_notes, JSON.stringify(extra_details || {}),
+                system_user_id, creatorName]
         );
 
         // Log activity
@@ -126,15 +132,15 @@ exports.getAllInquiries = async (req, res) => {
             return res.status(403).json({ message: 'Unauthorized' });
         }
 
-        let query = 'SELECT * FROM inquiries';
+        let query = 'SELECT i.*, i.created_by_name, i.created_by_user_id FROM inquiries i';
         let params = [];
 
         if (role === 'ADMIN') {
-            query += ' WHERE college_id = ?';
+            query += ' WHERE i.college_id = ?';
             params.push(college_id);
         }
 
-        query += ' ORDER BY created_at DESC';
+        query += ' ORDER BY i.created_at DESC';
 
         const [rows] = await db.query(query, params);
         res.json({ success: true, data: rows });
