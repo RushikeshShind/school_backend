@@ -7,7 +7,15 @@ const apiRoutes = require('./routes/api');
 const app = express();
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+            'frame-ancestors': ["'self'", 'https://admin-portal-roan-nu.vercel.app', 'http://localhost:3000'],
+        }
+    },
+    crossOriginEmbedderPolicy: false,
+}));
 app.use(cors({
     origin: '*', // Allow all origins for debugging
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

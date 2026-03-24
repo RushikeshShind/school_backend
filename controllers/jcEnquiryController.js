@@ -170,6 +170,8 @@ exports.generateJcEnquiryPdf = async (req, res) => {
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename=JC_Enquiry_${d.first_name}_${d.last_name}_${d.id}.pdf`);
+        res.setHeader('X-Frame-Options', 'ALLOWALL');
+        res.removeHeader('Content-Security-Policy');
         doc.pipe(res);
 
         const pageW = doc.page.width;
