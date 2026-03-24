@@ -8,12 +8,14 @@ const collegeController = require('../controllers/collegeController');
 const profileController = require('../controllers/profileController');
 const admissionController = require('../controllers/admissionController');
 const roleController = require('../controllers/roleController');
+const jcEnquiryController = require('../controllers/jcEnquiryController');
 const authMiddleware = require('../middleware/authMiddleware');
 const admissionRoutes = require('./admissionRoutes');
 
 // Public Routes
 router.post('/login', authController.login);
 router.post('/inquiry', inquiryController.submitInquiry);
+router.post('/jc-enquiry', jcEnquiryController.submitJcEnquiry);
 
 // Protected Routes
 router.post('/logout', authMiddleware, authController.logout);
@@ -55,6 +57,12 @@ router.delete('/colleges/:id', authMiddleware, collegeController.deleteCollege);
 router.get('/activity-logs', authMiddleware, activityLogController.getActivityLogs);
 router.get('/activity-logs/summary', authMiddleware, activityLogController.getActivitySummary);
 router.get('/activity-logs/user/:system_user_id', authMiddleware, activityLogController.getUserActivityLogs);
+
+// JC Enquiry Routes
+router.get('/jc-enquiries', authMiddleware, jcEnquiryController.getAllJcEnquiries);
+router.post('/jc-enquiries', authMiddleware, jcEnquiryController.adminCreateJcEnquiry);
+router.get('/jc-enquiries/:id', authMiddleware, jcEnquiryController.getJcEnquiryById);
+router.get('/jc-enquiries/:id/pdf', authMiddleware, jcEnquiryController.generateJcEnquiryPdf);
 
 // Super Admin Only: Role Management
 router.get('/roles', authMiddleware, roleController.getRoles);
