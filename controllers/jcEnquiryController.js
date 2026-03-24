@@ -6,48 +6,62 @@ const fs = require('fs');
 
 const LOGO_PATH = path.join(__dirname, '../assets/AMIG.png');
 
+// Convert empty strings to null, parse numeric fields
+function cleanData(data) {
+    const cleaned = {};
+    for (const [key, val] of Object.entries(data)) {
+        if (val === '' || val === undefined) {
+            cleaned[key] = null;
+        } else {
+            cleaned[key] = val;
+        }
+    }
+    return cleaned;
+}
+
+function buildInsertData(data) {
+    return cleanData({
+        college_id: data.college_id || 1,
+        stream: data.stream,
+        course: data.course,
+        gender: data.gender,
+        enquiry_date: data.enquiry_date || null,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        candidate_mobile: data.candidate_mobile,
+        father_name: data.father_name,
+        father_mobile: data.father_mobile,
+        mother_name: data.mother_name,
+        mother_mobile: data.mother_mobile,
+        residential_address: data.residential_address,
+        pincode: data.pincode,
+        how_found: data.how_found,
+        previous_school_name: data.previous_school_name,
+        tenth_pass_percentage: data.tenth_pass_percentage || null,
+        tenth_year_of_passing: data.tenth_year_of_passing,
+        tenth_board: data.tenth_board,
+        tenth_school_name_address: data.tenth_school_name_address,
+        tenth_exam_center: data.tenth_exam_center,
+        twelfth_pass_percentage: data.twelfth_pass_percentage || null,
+        twelfth_year_of_passing: data.twelfth_year_of_passing,
+        twelfth_board: data.twelfth_board,
+        twelfth_school_name_address: data.twelfth_school_name_address,
+        twelfth_exam_center: data.twelfth_exam_center,
+        iti_pass_percentage: data.iti_pass_percentage || null,
+        iti_year_of_passing: data.iti_year_of_passing,
+        iti_board: data.iti_board,
+        iti_school_name_address: data.iti_school_name_address,
+        iti_exam_center: data.iti_exam_center,
+        category: data.category || 'OPEN',
+        email: data.email
+    });
+}
+
 // Submit JC Enquiry (Public)
 exports.submitJcEnquiry = async (req, res) => {
     try {
-        const data = req.body;
-        const [result] = await db.query(
-            `INSERT INTO jc_enquiries SET ?`,
-            [{
-                college_id: data.college_id || 1,
-                stream: data.stream,
-                course: data.course,
-                gender: data.gender,
-                enquiry_date: data.enquiry_date,
-                first_name: data.first_name,
-                last_name: data.last_name,
-                candidate_mobile: data.candidate_mobile,
-                father_name: data.father_name,
-                father_mobile: data.father_mobile,
-                mother_name: data.mother_name,
-                mother_mobile: data.mother_mobile,
-                residential_address: data.residential_address,
-                pincode: data.pincode,
-                how_found: data.how_found,
-                previous_school_name: data.previous_school_name,
-                tenth_pass_percentage: data.tenth_pass_percentage || null,
-                tenth_year_of_passing: data.tenth_year_of_passing,
-                tenth_board: data.tenth_board,
-                tenth_school_name_address: data.tenth_school_name_address,
-                tenth_exam_center: data.tenth_exam_center,
-                twelfth_pass_percentage: data.twelfth_pass_percentage || null,
-                twelfth_year_of_passing: data.twelfth_year_of_passing,
-                twelfth_board: data.twelfth_board,
-                twelfth_school_name_address: data.twelfth_school_name_address,
-                twelfth_exam_center: data.twelfth_exam_center,
-                iti_pass_percentage: data.iti_pass_percentage || null,
-                iti_year_of_passing: data.iti_year_of_passing,
-                iti_board: data.iti_board,
-                iti_school_name_address: data.iti_school_name_address,
-                iti_exam_center: data.iti_exam_center,
-                category: data.category,
-                email: data.email
-            }]
-        );
+        const insertData = buildInsertData(req.body);
+        const [result] = await db.query(`INSERT INTO jc_enquiries SET ?`, [insertData]);
 
         res.status(201).json({
             success: true,
@@ -56,7 +70,7 @@ exports.submitJcEnquiry = async (req, res) => {
         });
     } catch (error) {
         console.error('JC Enquiry submit error:', error);
-        res.status(500).json({ success: false, message: 'Server Error' });
+        res.status(500).json({ success: false, message: error.message || 'Server Error' });
     }
 };
 
@@ -72,47 +86,12 @@ exports.adminCreateJcEnquiry = async (req, res) => {
         }
 
         const creatorName = req.user.full_name || req.user.username || username;
+        const insertData = buildInsertData(data);
+        insertData.college_id = final_college_id;
+        insertData.created_by_user_id = system_user_id;
+        insertData.created_by_name = creatorName;
 
-        const [result] = await db.query(
-            `INSERT INTO jc_enquiries SET ?`,
-            [{
-                college_id: final_college_id,
-                stream: data.stream,
-                course: data.course,
-                gender: data.gender,
-                enquiry_date: data.enquiry_date,
-                first_name: data.first_name,
-                last_name: data.last_name,
-                candidate_mobile: data.candidate_mobile,
-                father_name: data.father_name,
-                father_mobile: data.father_mobile,
-                mother_name: data.mother_name,
-                mother_mobile: data.mother_mobile,
-                residential_address: data.residential_address,
-                pincode: data.pincode,
-                how_found: data.how_found,
-                previous_school_name: data.previous_school_name,
-                tenth_pass_percentage: data.tenth_pass_percentage || null,
-                tenth_year_of_passing: data.tenth_year_of_passing,
-                tenth_board: data.tenth_board,
-                tenth_school_name_address: data.tenth_school_name_address,
-                tenth_exam_center: data.tenth_exam_center,
-                twelfth_pass_percentage: data.twelfth_pass_percentage || null,
-                twelfth_year_of_passing: data.twelfth_year_of_passing,
-                twelfth_board: data.twelfth_board,
-                twelfth_school_name_address: data.twelfth_school_name_address,
-                twelfth_exam_center: data.twelfth_exam_center,
-                iti_pass_percentage: data.iti_pass_percentage || null,
-                iti_year_of_passing: data.iti_year_of_passing,
-                iti_board: data.iti_board,
-                iti_school_name_address: data.iti_school_name_address,
-                iti_exam_center: data.iti_exam_center,
-                category: data.category,
-                email: data.email,
-                created_by_user_id: system_user_id,
-                created_by_name: creatorName
-            }]
-        );
+        const [result] = await db.query(`INSERT INTO jc_enquiries SET ?`, [insertData]);
 
         await logActivity(system_user_id, role, username, 'CREATE_JC_ENQUIRY',
             `Created JC enquiry for: ${data.first_name} ${data.last_name} (ID: ${result.insertId})`, req);
@@ -124,7 +103,7 @@ exports.adminCreateJcEnquiry = async (req, res) => {
         });
     } catch (error) {
         console.error('Admin JC Enquiry error:', error);
-        res.status(500).json({ success: false, message: 'Server Error' });
+        res.status(500).json({ success: false, message: error.message || 'Server Error' });
     }
 };
 
